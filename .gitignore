@@ -2,3 +2,7 @@
 cache
 secret.txt
 user.txt
+
+# Datasets
+datasets/
+osm_data/
