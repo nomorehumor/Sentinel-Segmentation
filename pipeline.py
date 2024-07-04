@@ -3,10 +3,7 @@ from torch.utils.data import DataLoader
 
 from model import SegmentationModel
 from training import train, test
-from pathlib import Path
-
-DATASET_DIR = Path("datasets")
-SAVE_DIR = DATASET_DIR / "training"
+from constants import SAVE_DIR
 
 
 def load_data(path = SAVE_DIR, batch_size=32):

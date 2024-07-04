@@ -1,4 +1,3 @@
-from pathlib import Path
 import osmnx as ox
 import openeo
 import rasterio
@@ -7,12 +6,7 @@ from tqdm import tqdm
 import numpy as np
 from matplotlib import pyplot as plt
 
-DATASET_DIR = Path("datasets")
-BUILDING_DATASET_DIR = DATASET_DIR / "building_footprints"
-SENTINEL_DATASET_DIR = DATASET_DIR / "sentinel"
-SAVE_DIR = DATASET_DIR / "training"
-CITIES = ["Bologna, Italy", "Milan, Italy", "Split, Croatia", "Valencia, Spain", "Oslo, Norway", "Krasnodar, Russia", "Paris, France", "Barcelona, Spain", "Berlin, Germany"]
-
+from constants import DATASET_DIR, SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES
 
 def normalize(img):
     masked_data = np.ma.masked_equal(img, 0)

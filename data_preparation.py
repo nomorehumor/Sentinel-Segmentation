@@ -2,16 +2,10 @@ import torch
 from torch.utils.data import TensorDataset
 import rasterio
 import numpy as np
-from pathlib import Path
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 
-DATASET_DIR = Path("datasets")
-BUILDING_DATASET_DIR = DATASET_DIR / "building_footprints"
-SENTINEL_DATASET_DIR = DATASET_DIR / "sentinel"
-SAVE_DIR = DATASET_DIR / "training"
-CITIES = ["Bologna, Italy", "Milan, Italy", "Split, Croatia", "Valencia, Spain", "Oslo, Norway", "Krasnodar, Russia", "Paris, France", "Barcelona, Spain", "Berlin, Germany"]
-
+from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES
 
 def create_dataset():
     patch_size = 32
