@@ -2,6 +2,8 @@
 cache
 secret.txt
 user.txt
+__pycache__
+.ipynb_checkpoints
 
 # Datasets
 datasets/
