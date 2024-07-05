@@ -12,13 +12,16 @@ from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_D
 
 def create_dataset():
     patch_size = 32
-    patches = []
+    patches = torch.empty(0, patch_size, patch_size, 6)
     for city in CITIES:
         print(city)
         city_path = city.split(",")[0].lower()
         preprocess_tensor = load_city_bands(city_path)
-        city_patch = create_patches(preprocess_tensor, patch_size)
-        patches.append(city_patch)
+        city_patches = create_patches(preprocess_tensor, patch_size)
+        
+        patches_cat = torch.empty(patches.shape[0] + city_patches.shape[0], patch_size, patch_size, 6)
+        torch.cat((patches, city_patches), dim=0, out=patches_cat)
+        patches = patches_cat
     create_torch_dataset(patches)
     
 
@@ -83,8 +86,6 @@ def is_cloud_present(img):
 def create_patches(preprocess_tensor, patch_size, plot=False):
     image_height, image_width = preprocess_tensor.size()[:2]
 
-    patch_size = patch_size
-
     patches_grid = preprocess_tensor.unfold(0, patch_size, patch_size).unfold(1, patch_size, patch_size).permute(0,1,3,4,2)
     patches_num_x, patches_num_y = patches_grid.size()[:2]
     # print(patches_grid.size())
@@ -138,14 +139,12 @@ def create_dataset_sets(input_tensor, output_tensor):
     
     return train, val, test
 
-def create_torch_dataset(patches_list):
-
+def create_torch_dataset(patches):
     valid_patches = []
-    for patches in patches_list:
-        for i in range(len(patches)):
-            if not is_cloud_present(patches[i]):
-                valid_patches.append(i)
-        print(f"{len(valid_patches)}/{len(patches)} patches are valid")
+    for i in range(len(patches)):
+        if not is_cloud_present(patches[i]):
+            valid_patches.append(i)
+    print(f"{len(valid_patches)}/{len(patches)} patches are valid")
 
     input_tensor = patches[valid_patches, :, :, :3].permute(0,3,1,2) # change dims to (N, C, H, W)
     output_tensor = patches[valid_patches, :, :, 4]
