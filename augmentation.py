@@ -26,7 +26,7 @@ def apply_transform(data, transform):
     x = TF.to_tensor(x)
     return x, y
 
-def augment_dataset(dataset, augmentations, compound_augmentations):
+def augment_dataset(dataset):
     augmented_datasets = {}
     for name, transform in augmentations.items():
         augmented_datasets[name] = [(apply_transform(data, transform)) for data in dataset]

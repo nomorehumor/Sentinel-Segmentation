@@ -4,6 +4,7 @@ import rasterio
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
+from augmentation import augment_dataset
 
 from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_DIR
 
@@ -19,7 +20,6 @@ def create_dataset():
   
     create_torch_dataset(patches)
     
-
 
 def normalize(img):
     masked_data = np.ma.masked_equal(img, 0)
@@ -130,6 +130,19 @@ def create_torch_dataset(patches_list):
     torch.save(test, SAVE_DIR / 'test.pt')
 
     print(f'Saved datasets to {SAVE_DIR}')
+
+    # augmented_train = augment_dataset(train)
+    # augmented_val = augment_dataset(val)
+    # augmented_test = augment_dataset(test)
+
+    # for transformation in augmented_train:
+    #     torch.save(augmented_train[transformation], SAVE_DIR / 'augmented_train_' + str(transformation) + '.pt')
+    # for transformation in augmented_train:
+    #     torch.save(augmented_val[transformation], SAVE_DIR / 'augmented_val_' + str(transformation) + '.pt')
+    # for transformation in augmented_train:
+    #     torch.save(augmented_test[transformation], SAVE_DIR / 'augmented_test_' + str(transformation) + '.pt')
+
+    # print(f'Saved augmented datasets to {SAVE_DIR}')
 
     return train, test, val
 
