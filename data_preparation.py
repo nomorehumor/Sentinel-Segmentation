@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 
-from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES
+from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_DIR
 
 def create_dataset():
     patch_size = 32

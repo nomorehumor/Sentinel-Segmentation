@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-
+from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large, fcn_resnet101, fcn_resnet50
 from model import SegmentationModel
 from training import train, test
 from constants import SAVE_DIR

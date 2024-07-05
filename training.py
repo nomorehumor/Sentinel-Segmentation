@@ -23,20 +23,21 @@ def train(model, train_loader, val_loader, lr, num_epochs, device):
             
             outputs = model(images)
             loss = criterion(outputs, labels)
-
             loss.backward()
             optimizer.step()
 
             epoch_loss += loss.item()
-            epoch_accuracy += accuracy(outputs, labels)
+            epoch_accuracy += calculate_overlap_metrics(outputs, labels)[1]
         
         val_loss, val_accuracy = evaluate(model, criterion, val_loader, device)
         
         print(f"""Epoch {epoch+1}/{num_epochs}, Training Loss: {epoch_loss/len(train_loader)}, Training Accuracy: {epoch_accuracy/len(train_loader)}, 
-              Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy}""")
+              Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy} {len(val_loader)}""")
         
     model_path = 'model_{}_{}'.format(timestamp, val_accuracy)
     torch.save(model.state_dict(), model_path)  
+
+    return model
 
 
 def test(model, test_loader, device, num_images=5, plot=True):
@@ -53,7 +54,7 @@ def test(model, test_loader, device, num_images=5, plot=True):
             outputs = model(images)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
-            test_accuracy += accuracy(outputs, labels)
+            test_accuracy += calculate_overlap_metrics(outputs, labels)[1]
             
             preds = torch.sigmoid(outputs) > 0.5 
             
@@ -67,7 +68,7 @@ def test(model, test_loader, device, num_images=5, plot=True):
     avg_test_loss = test_loss / len(test_loader)
     avg_test_accuracy = test_accuracy / len(test_loader)
     
-    print(f"Test Loss: {avg_test_loss}, Test Accuracy: {avg_test_accuracy}")
+    print(f"Test Loss: {avg_test_loss}, Test Accuracy: {avg_test_accuracy}, {len(test_loader)}")
     
     if plot:
         images_list = torch.cat(images_list)[:num_images]
@@ -87,7 +88,7 @@ def evaluate(model, criterion, val_loader, device):
             outputs = model(images)
             loss = criterion(outputs, labels)
             val_loss += loss.item()
-            val_accuracy += accuracy(outputs, labels)
+            val_accuracy += calculate_overlap_metrics(outputs, labels)[1]
     return val_loss / len(val_loader), val_accuracy / len(val_loader)
 
 
@@ -123,3 +124,24 @@ def plot_results(num_images, images_list, labels_list, preds_list):
     
     plt.tight_layout()
     plt.show()
+
+
+def calculate_overlap_metrics(pred, gt):
+    pred = (torch.sigmoid(pred) > 0.5).float()
+    eps=1e-5
+    output = pred.view(-1, )
+    target = gt.view(-1, ).float()
+
+    tp = torch.sum(output * target)# TP
+    fp = torch.sum(output * (1 - target))  # FP
+    fn = torch.sum((1 - output) * target)  # FN
+    tn = torch.sum((1 - output) * (1 - target))  # TN
+
+    pixel_acc = (tp + tn + eps) / (tp + tn + fp + fn + eps)
+    dice = (2 * tp + eps) / (2 * tp + fp + fn + eps)
+    precision = (tp + eps) / (tp + fp + eps)
+    recall = (tp + eps) / (tp + fn + eps)
+    specificity = (tn + eps) / (tn + fp + eps)
+    iou = (tp + eps) / (tp + fp + fn + eps)
+
+    return pixel_acc, dice, precision, specificity, recall, iou
