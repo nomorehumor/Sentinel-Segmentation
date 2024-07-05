@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large, fcn_resnet101, fcn_resnet50
-from model import SegmentationModel
+from model import SegmentationModel, UNet
 from training import train, test
 from constants import SAVE_DIR
 
@@ -31,7 +31,8 @@ def run_pipeline():
 
     train_loader, val_loader, test_loader = load_data()
 
-    model = SegmentationModel(num_channels=C)
+    # model = SegmentationModel(num_channels=C)
+    model = UNet(n_class=1)
     model.to(device)
 
     train(model, train_loader=train_loader, val_loader=val_loader, lr=lr, num_epochs=num_epochs, device=device)
