@@ -5,6 +5,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 from augmentation import augment_dataset
+from sklearn.model_selection import StratifiedShuffleSplit
+
 
 from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_DIR
 
@@ -17,7 +19,6 @@ def create_dataset():
         preprocess_tensor = load_city_bands(city_path)
         city_patch = create_patches(preprocess_tensor, patch_size)
         patches.append(city_patch)
-  
     create_torch_dataset(patches)
     
 
@@ -109,6 +110,34 @@ def create_patches(preprocess_tensor, patch_size, plot=False):
     return patches
 
 
+def evaluate_dataset_positive_classes(dataset_label_tensors):
+    # Evaluate the number of positive classes in the dataset
+    flattened_dataset = dataset_label_tensors.flatten()
+    return np.count_nonzero(flattened_dataset) / len(flattened_dataset)
+
+
+def create_dataset_sets(input_tensor, output_tensor):
+    output_tensor_flat = output_tensor.view(output_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    for train_val_idx, test_idx in splitter.split(np.zeros(len(input_tensor)), output_tensor_flat):
+        inputs_train_val, inputs_test = input_tensor[train_val_idx], input_tensor[test_idx]
+        output_train_val, output_test = output_tensor[train_val_idx], output_tensor[test_idx]
+        
+    splitter_train_val = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=42)  # 0.25 x 0.8 = 0.2 of original data
+    for train_idx, val_idx in splitter_train_val.split(np.zeros(len(inputs_train_val)), output_train_val.view(output_train_val.size(0), -1).mean(dim=1).numpy().round().astype(int)):
+        inputs_train, inputs_val = inputs_train_val[train_idx], inputs_train_val[val_idx]
+        output_train, output_val = output_train_val[train_idx], output_train_val[val_idx]
+    
+    print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(output_train))
+    print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(output_test))
+    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(output_val))
+
+    train = TensorDataset(inputs_train, output_train)
+    val = TensorDataset(inputs_val, output_val)
+    test = TensorDataset(inputs_test, output_test)
+    
+    return train, val, test
+
 def create_torch_dataset(patches_list):
 
     valid_patches = []
@@ -120,11 +149,10 @@ def create_torch_dataset(patches_list):
 
     input_tensor = patches[valid_patches, :, :, :3].permute(0,3,1,2) # change dims to (N, C, H, W)
     output_tensor = patches[valid_patches, :, :, 4]
-    dataset = TensorDataset(input_tensor, output_tensor)
+    
+    train, val, test = create_dataset_sets(input_tensor, output_tensor)
 
-    generator = torch.Generator().manual_seed(42)
-    train, test, val = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2], generator=generator)
-
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(train, SAVE_DIR / 'train.pt')
     torch.save(val, SAVE_DIR / 'val.pt')
     torch.save(test, SAVE_DIR / 'test.pt')

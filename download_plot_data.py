@@ -1,3 +1,5 @@
+from pathlib import Path
+import matplotlib
 import osmnx as ox
 import openeo
 import rasterio
@@ -41,7 +43,7 @@ def download_sentinel_openeo(connection, bbox, dir_path, pbar=None):
 
     s2_cube = connection.load_collection(
         "SENTINEL2_L2A",
-        temporal_extent=("2024-05-01", "2024-05-30"),
+        temporal_extent=("2024-01-01", "2024-06-30"),
         spatial_extent={
             "west": bbox["west"],
             "south": bbox["south"],
@@ -49,7 +51,7 @@ def download_sentinel_openeo(connection, bbox, dir_path, pbar=None):
             "north": bbox["north"]
         },
         bands=["B04", "B03", "B02", "B08"],
-        max_cloud_cover=20,
+        max_cloud_cover=30
     )
     
     pbar.set_postfix({"data": "(B04)"})
@@ -121,23 +123,7 @@ def download_building_data(city, city_gdf):
         "west": city_gdf.bbox_west[0]
     }
     city_features = ox.features_from_bbox(north=bbox["north"], south=bbox["south"], east=bbox["east"], west=bbox["west"], tags={'building':True})
-    rasterize_city_features(city_features, city_bands_dir, city_label_dir)     
-
-    with rasterio.open(city_bands_dir / "R.tiff") as f:
-        r_data = np.transpose(f.read(), (1,2,0)).squeeze()
-        r_data = normalize(r_data)
-    with rasterio.open(city_label_dir / "footprint.tiff") as f:
-        building_data = np.transpose(f.read(), (1,2,0)).squeeze()
-        
-    plt.figure(figsize=(20, 20))
-    plt.imshow(building_data, cmap="Blues")
-    plt.savefig(city_label_dir / "footprint.png")  
-
-    bounds = city_features.total_bounds
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.imshow(r_data, cmap="gray", extent=(bounds[0], bounds[2], bounds[1], bounds[3]))
-    city_features.plot(ax=ax, facecolor='none', edgecolor='blue', linewidth=0.5, alpha=0.2)
-    fig.savefig(city_label_dir / "footprint_overlay.png")
+    rasterize_city_features(city_features, city_bands_dir, city_label_dir)
     
         
 def create_bands_plots(city):
@@ -191,7 +177,22 @@ def create_bands_plots(city):
     plt.imshow(irb_data)
     plt.savefig(city_path_sentinel / "irb.png")
     
+    
+def create_building_plot(city_bands_dir, city_building_dir):
+    footprint_file = rasterio.open(city_building_dir / "footprint.tiff")
+    building_data = np.transpose(footprint_file.read(), (1,2,0)).squeeze()
+    r_data = rasterio.open(city_bands_dir / "R.tiff").read().squeeze()
+    r_data = normalize(r_data)
+    
+    plt.figure(figsize=(20, 20))
+    plt.imshow(building_data, cmap="Blues")
+    plt.savefig(city_building_dir / "footprint.png")  
 
+    blue_cmap = matplotlib.colors.ListedColormap([(0,0,0,0), (0.3,0.3,1,0.7)])
+    plt.figure(figsize=(10, 10), dpi=300)
+    plt.imshow(r_data, cmap="gray")
+    plt.imshow(building_data, cmap=blue_cmap, alpha=1)
+    plt.savefig(city_building_dir / "footprint_overlay.png")
         
 if __name__ == '__main__':
     DATASET_DIR.mkdir(parents=True, exist_ok=True)
@@ -201,10 +202,13 @@ if __name__ == '__main__':
     cities_tqdm = tqdm(CITIES)
     
     for city in cities_tqdm:
-        cities_tqdm.set_description(f"Downloading band data for {city}")
         city_gdf = ox.geocode_to_gdf(city)
+        city = city.split(",")[0].lower()
+        
+        cities_tqdm.set_description(f"Downloading band data for {city}")
         download_band_data(city, city_gdf, cities_tqdm)
         create_bands_plots(city)
                 
         cities_tqdm.set_description(f"Downloading building data for {city}")
         download_building_data(city, city_gdf)
+        create_building_plot(SENTINEL_DATASET_DIR / city, BUILDING_DATASET_DIR / city)
