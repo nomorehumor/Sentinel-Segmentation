@@ -9,7 +9,11 @@ from matplotlib import pyplot as plt
 def train(model, train_loader, val_loader, lr, num_epochs, device):
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
+
+    best_val_accuracy = 0
+    patience = 10
+    patience_counter = 0
     
     for epoch in range(num_epochs):
         model.train()
@@ -30,12 +34,20 @@ def train(model, train_loader, val_loader, lr, num_epochs, device):
             epoch_accuracy += calculate_overlap_metrics(outputs, labels)[1]
         
         val_loss, val_accuracy = evaluate(model, criterion, val_loader, device)
-        
+        # scheduler.step(val_loss)
+
         print(f"""Epoch {epoch+1}/{num_epochs}, Training Loss: {epoch_loss/len(train_loader)}, Training Accuracy: {epoch_accuracy/len(train_loader)}, 
-              Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy} {len(val_loader)}""")
+              Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy}""")
         
-    model_path = 'model_{}_{}'.format(timestamp, val_accuracy)
-    torch.save(model.state_dict(), model_path)  
+        if val_accuracy > best_val_accuracy:
+            best_val_accuracy = val_accuracy
+            patience_counter = 0
+        else:
+            patience_counter += 1
+
+        if patience_counter >= patience:
+            print("Early stopping triggered")
+            break
 
     return model
 
@@ -44,7 +56,8 @@ def test(model, test_loader, device, num_images=5, plot=True):
     model.eval()
     criterion = nn.BCEWithLogitsLoss()
     test_loss = 0
-    test_accuracy = 0
+    test_pixel_accuracy, test_dice, test_precision, test_specificity, test_recall, test_iou = 0, 0, 0, 0, 0, 0
+
     images_list, labels_list, preds_list = [], [], []
 
     with torch.no_grad():
@@ -54,33 +67,42 @@ def test(model, test_loader, device, num_images=5, plot=True):
             outputs = model(images)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
-            test_accuracy += calculate_overlap_metrics(outputs, labels)[1]
+            
+            metrics = calculate_overlap_metrics(outputs, labels)
+
+            test_pixel_accuracy += metrics[0]
+            test_dice += metrics[1]
+            test_precision += metrics[2]
+            test_specificity += metrics[3]
+            test_recall += metrics[4]
+            test_iou += metrics[5]
             
             preds = torch.sigmoid(outputs) > 0.5 
             
             images_list.append(images.cpu())
             labels_list.append(labels.cpu())
             preds_list.append(preds.cpu())
-            
-            if len(images_list) * images.size(0) >= num_images:
-                break
     
     avg_test_loss = test_loss / len(test_loader)
-    avg_test_accuracy = test_accuracy / len(test_loader)
+    avg_test_dice = test_dice / len(test_loader)
     
-    print(f"Test Loss: {avg_test_loss}, Test Accuracy: {avg_test_accuracy}, {len(test_loader)}")
+    print(f"Test Loss: {avg_test_loss}, Test Accuracy: {avg_test_dice}")
     
     if plot:
         images_list = torch.cat(images_list)[:num_images]
         labels_list = torch.cat(labels_list)[:num_images]
         preds_list = torch.cat(preds_list)[:num_images]
-        plot_results(num_images, images_list, labels_list, preds_list)        
+        plot_results(num_images, images_list, labels_list, preds_list) 
+
+    return test_pixel_accuracy / len(test_loader), test_dice / len(test_loader), test_precision / len(test_loader), \
+    test_specificity / len(test_loader), test_recall / len(test_loader), test_iou / len(test_loader)
 
 
 def evaluate(model, criterion, val_loader, device):
     model.eval()
     val_loss = 0
     val_accuracy = 0
+
     with torch.no_grad():
         for images, labels in val_loader:
             images, labels = images.float().to(device), labels.float().to(device)
@@ -88,7 +110,7 @@ def evaluate(model, criterion, val_loader, device):
             outputs = model(images)
             loss = criterion(outputs, labels)
             val_loss += loss.item()
-            val_accuracy += calculate_overlap_metrics(outputs, labels)[1]
+            val_accuracy += calculate_overlap_metrics(outputs, labels)[1]       
     return val_loss / len(val_loader), val_accuracy / len(val_loader)
 
 
@@ -132,10 +154,10 @@ def calculate_overlap_metrics(pred, gt):
     output = pred.view(-1, )
     target = gt.view(-1, ).float()
 
-    tp = torch.sum(output * target)# TP
-    fp = torch.sum(output * (1 - target))  # FP
-    fn = torch.sum((1 - output) * target)  # FN
-    tn = torch.sum((1 - output) * (1 - target))  # TN
+    tp = torch.sum(output * target)
+    fp = torch.sum(output * (1 - target))  
+    fn = torch.sum((1 - output) * target)  
+    tn = torch.sum((1 - output) * (1 - target)) 
 
     pixel_acc = (tp + tn + eps) / (tp + tn + fp + fn + eps)
     dice = (2 * tp + eps) / (2 * tp + fp + fn + eps)
