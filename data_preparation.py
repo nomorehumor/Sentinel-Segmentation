@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 from augmentation import augment_dataset
 from sklearn.model_selection import StratifiedShuffleSplit
+from torchvision import transforms
 
 
 from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_DIR
@@ -59,9 +60,12 @@ def load_city_bands(city_path):
         building_data = np.transpose(f.read(), (1,2,0)).squeeze()
 
 
-    all_bands = np.stack([r_data, g_data, b_data, ir_data], axis=-1)
-    all_bands = normalize(all_bands)
-    vis(all_bands[:,:,:3], quant_norm=False)
+    all_bands = np.stack([
+        normalize(r_data), 
+        normalize(g_data), 
+        normalize(b_data), 
+        normalize(ir_data)
+        ], axis=-1)
 
     stacked_data = np.stack([ir_data, r_data, g_data, b_data], axis=-1).reshape(-1, 4)
     kmeans = KMeans(n_clusters=2, random_state=0).fit(stacked_data)
@@ -102,11 +106,10 @@ def create_patches(preprocess_tensor, patch_size, plot=False):
                 ax = plt.subplot(patches_num_x, patches_num_y, x*patches_num_y + y + 1)
                 ax.set_xticks([])
                 ax.set_yticks([])
-                # ax.axis("off")
+                ax.axis("off")
                 
                 patch_rgb = patches_grid[x, y, :, :, :3]
                 plt.imshow(patch_rgb)
-                # plt.imshow(patches_grid[x, y, :, :, 4], cmap="gray")
 
     return patches
 
@@ -139,6 +142,19 @@ def create_dataset_sets(input_tensor, output_tensor):
     
     return train, val, test
 
+def normalize_data(data, channels=[]):
+    means = []
+    stds = []
+    for i in channels:
+        means.append(data[:,i,:,:].mean())
+        stds.append(data[:,i,:,:].std())
+    
+    transform = transforms.Compose([
+        transforms.Normalize(means, stds, inplace=True)
+    ])
+    transform(data)
+    
+
 def create_torch_dataset(patches):
     valid_patches = []
     for i in range(len(patches)):
@@ -146,8 +162,10 @@ def create_torch_dataset(patches):
             valid_patches.append(i)
     print(f"{len(valid_patches)}/{len(patches)} patches are valid")
 
-    input_tensor = patches[valid_patches, :, :, :3].permute(0,3,1,2) # change dims to (N, C, H, W)
+    input_tensor = patches[valid_patches, :, :, :4].permute(0,3,1,2) # change dims to (N, C, H, W)
     output_tensor = patches[valid_patches, :, :, 4]
+    
+    normalize_data(input_tensor, [0,1,2,3]) 
     
     train, val, test = create_dataset_sets(input_tensor, output_tensor)
 
