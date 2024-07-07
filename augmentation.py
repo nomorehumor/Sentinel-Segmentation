@@ -13,23 +13,25 @@ augmentations = {
 
 compound_augmentations = {
     "rotate_reflect": T.Compose([augmentations["rotation"], augmentations["reflection"]]),
-    "rotate_zoom": T.Compose([augmentations["rotation"], augmentations["zoom"]]),
-    "reflect_zoom": T.Compose([augmentations["reflection"], augmentations["zoom"]]),
-    "rotate_reflect_affine": T.Compose([augmentations["rotation"], augmentations["reflection"], augmentations["affine"]]),
-    "all": T.Compose([augmentations["rotation"], augmentations["reflection"], augmentations["zoom"], augmentations["affine"]])
+    # "rotate_zoom": T.Compose([augmentations["rotation"], augmentations["zoom"]]),
+    # "reflect_zoom": T.Compose([augmentations["reflection"], augmentations["zoom"]]),
+    # "rotate_reflect_affine": T.Compose([augmentations["rotation"], augmentations["reflection"], augmentations["affine"]]),
+    # "all": T.Compose([augmentations["rotation"], augmentations["reflection"], augmentations["zoom"], augmentations["affine"]])
 }
 
 def apply_transform(data, transform):
     x, y = data
     x = TF.to_pil_image(x)
     x = transform(x)
-    x = TF.to_tensor(x)
-    return x, y
+    y = TF.to_pil_image(y)
+    y = transform(y)
+    return TF.to_tensor(x), TF.to_tensor(y).squeeze(0)
 
 def augment_dataset(dataset):
     augmented_datasets = {}
-    for name, transform in augmentations.items():
-        augmented_datasets[name] = [(apply_transform(data, transform)) for data in dataset]
+    # for name, transform in augmentations.items():
+    #     augmented_datasets[name] = [(apply_transform(data, transform)) for data in dataset]
+    # print(len(dataset))
     for name, transform in compound_augmentations.items():
         augmented_datasets[name] = [(apply_transform(data, transform)) for data in dataset]
     return augmented_datasets

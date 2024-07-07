@@ -7,6 +7,8 @@ from sklearn.cluster import KMeans
 from augmentation import augment_dataset
 from sklearn.model_selection import StratifiedShuffleSplit
 from torchvision import transforms
+import warnings
+warnings.filterwarnings("ignore")
 
 
 from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_DIR
@@ -23,7 +25,7 @@ def create_dataset():
         patches_cat = torch.empty(patches.shape[0] + city_patches.shape[0], patch_size, patch_size, 6)
         torch.cat((patches, city_patches), dim=0, out=patches_cat)
         patches = patches_cat
-    create_torch_dataset(patches)
+    create_torch_dataset(patches, patch_size)
     
 
 def normalize(img):
@@ -92,9 +94,7 @@ def create_patches(preprocess_tensor, patch_size, plot=False):
 
     patches_grid = preprocess_tensor.unfold(0, patch_size, patch_size).unfold(1, patch_size, patch_size).permute(0,1,3,4,2)
     patches_num_x, patches_num_y = patches_grid.size()[:2]
-    # print(patches_grid.size())
     patches = patches_grid.flatten(start_dim=0, end_dim=1)
-    # print(patches.size())
     
     if plot:
         plt.figure(figsize=(10,10))
@@ -155,7 +155,7 @@ def normalize_data(data, channels=[]):
     transform(data)
     
 
-def create_torch_dataset(patches):
+def create_torch_dataset(patches, patch_size):
     valid_patches = []
     for i in range(len(patches)):
         if not is_cloud_present(patches[i]):
@@ -170,24 +170,24 @@ def create_torch_dataset(patches):
     train, val, test = create_dataset_sets(input_tensor, output_tensor)
 
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
-    torch.save(train, SAVE_DIR / 'train.pt')
-    torch.save(val, SAVE_DIR / 'val.pt')
-    torch.save(test, SAVE_DIR / 'test.pt')
+    torch.save(train, SAVE_DIR /  f'{str(patch_size)}_train.pt')
+    torch.save(val, SAVE_DIR / f'{str(patch_size)}_val.pt')
+    torch.save(test, SAVE_DIR / f'{str(patch_size)}_test.pt')
 
     print(f'Saved datasets to {SAVE_DIR}')
 
-    # augmented_train = augment_dataset(train)
-    # augmented_val = augment_dataset(val)
-    # augmented_test = augment_dataset(test)
+    augmented_train = augment_dataset(train)
+    augmented_val = augment_dataset(val)
+    augmented_test = augment_dataset(test)
 
-    # for transformation in augmented_train:
-    #     torch.save(augmented_train[transformation], SAVE_DIR / 'augmented_train_' + str(transformation) + '.pt')
-    # for transformation in augmented_train:
-    #     torch.save(augmented_val[transformation], SAVE_DIR / 'augmented_val_' + str(transformation) + '.pt')
-    # for transformation in augmented_train:
-    #     torch.save(augmented_test[transformation], SAVE_DIR / 'augmented_test_' + str(transformation) + '.pt')
+    for transformation in augmented_train:
+        torch.save(augmented_train[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_train.pt')
+    for transformation in augmented_train:
+        torch.save(augmented_val[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_val.pt')
+    for transformation in augmented_train:
+        torch.save(augmented_test[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_test.pt')
 
-    # print(f'Saved augmented datasets to {SAVE_DIR}')
+    print(f'Saved augmented datasets to {SAVE_DIR}')
 
     return train, test, val
 
