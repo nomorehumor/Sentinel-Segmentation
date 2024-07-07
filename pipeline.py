@@ -4,13 +4,13 @@ import torch
 from torch.utils.data import DataLoader
 from model import SegmentationModel, UNet
 from training import train, test
-from constants import TRAINING_DATASET_DIR, MODELS_DIR, PARAMS_DIR
+from constants import TRAINING_DATASET_DIR, MODELS_DIR, PARAMS_DIR, RESULTS_DIR
 import warnings
 warnings.filterwarnings("ignore")
 
 
 def load_data(dataset_name,  batch_size=32):
-    print(f'Loading datasets {dataset_name}')
+    print(f'Loading datasets {dataset_name}_train _val _test')
 
     train = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_train.pt')
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True)
@@ -29,10 +29,11 @@ def run_pipeline():
     num_epochs = 30
     augmented = False
     augmentation_type = ''
-    patch_size = 32
+    patch_size = 64
     batch_size = 32
-    dropout_rate = 0
-    early_stopping = False
+    dropout_rate = 0.2
+    early_stopping = True
+    lr_scheduling = True
 
     dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
 
@@ -48,7 +49,7 @@ def run_pipeline():
     if model_type == 'unet':
         model = UNet(num_channels=C, n_class=1)
     else:
-        model = SegmentationModel(num_channels=C, dropout_rate=0)
+        model = SegmentationModel(num_channels=C, dropout_rate=dropout_rate)
 
     # model = smp.Unet(
     #     encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
@@ -59,14 +60,24 @@ def run_pipeline():
 
     model.to(device)
 
-    model = train(model, train_loader=train_loader, val_loader=val_loader, lr=lr, num_epochs=num_epochs, device=device)
+    model = train(model, 
+                  train_loader=train_loader, 
+                  val_loader=val_loader, 
+                  lr=lr, 
+                  num_epochs=num_epochs, 
+                  device=device, 
+                  early_stopping=early_stopping,
+                  lr_scheduling=lr_scheduling)
 
     metrics = test(model, test_loader=test_loader, device=device, plot=False)
 
-    save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, num_epochs, lr,  metrics)
+    save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, \
+          early_stopping, lr_scheduling, num_epochs, lr,  metrics)
 
 
-def save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, epochs, lr, metrics):
+def save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, \
+          early_stopping, lr_scheduling, epochs, lr, metrics):
+    
     timestamp = datetime.now().strftime('%d%m_%H%M')
 
     saved_params = {
@@ -80,14 +91,16 @@ def save(model_type, model, C, patch_size, augmented, augmentation_type, batch_s
         'number_of_epochs': epochs,
         'dropout_rate': dropout_rate,
         'early_stopping': early_stopping,
-        'pixel_accuracy': metrics[0],
-        'dice_coefficient': metrics[1],
-        'precision': metrics[2],
-        'specificity': metrics[3],
-        'recall': metrics[4],
-        'iou': metrics[5]
+        'lr_scheduling': lr_scheduling,
+        'pixel_accuracy': metrics[0].item(),
+        'dice_coefficient': metrics[1].item(),
+        'precision': metrics[2].item(),
+        'specificity': metrics[3].item(),
+        'recall': metrics[4].item(),
+        'iou': metrics[5].item()
     }
 
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     PARAMS_DIR.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 

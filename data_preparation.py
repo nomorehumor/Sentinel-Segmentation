@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, SAVE_DIR
+from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, TRAINING_DATASET_DIR
 
 def create_dataset():
     patch_size = 32
@@ -169,27 +169,25 @@ def create_torch_dataset(patches, patch_size):
     
     train, val, test = create_dataset_sets(input_tensor, output_tensor)
 
-    SAVE_DIR.mkdir(parents=True, exist_ok=True)
-    torch.save(train, SAVE_DIR /  f'{str(patch_size)}_train.pt')
-    torch.save(val, SAVE_DIR / f'{str(patch_size)}_val.pt')
-    torch.save(test, SAVE_DIR / f'{str(patch_size)}_test.pt')
+    TRAINING_DATASET_DIR.mkdir(parents=True, exist_ok=True)
+    torch.save(train, TRAINING_DATASET_DIR /  f'{str(patch_size)}_train.pt')
+    torch.save(val, TRAINING_DATASET_DIR / f'{str(patch_size)}_val.pt')
+    torch.save(test, TRAINING_DATASET_DIR / f'{str(patch_size)}_test.pt')
 
-    print(f'Saved datasets to {SAVE_DIR}')
+    print(f'Saved datasets to {TRAINING_DATASET_DIR}')
 
-    augmented_train = augment_dataset(train)
-    augmented_val = augment_dataset(val)
-    augmented_test = augment_dataset(test)
+    # augmented_train = augment_dataset(train)
+    # augmented_val = augment_dataset(val)
+    # augmented_test = augment_dataset(test)
 
-    for transformation in augmented_train:
-        torch.save(augmented_train[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_train.pt')
-    for transformation in augmented_train:
-        torch.save(augmented_val[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_val.pt')
-    for transformation in augmented_train:
-        torch.save(augmented_test[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_test.pt')
+    # for transformation in augmented_train:
+    #     torch.save(augmented_train[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_train.pt')
+    # for transformation in augmented_train:
+    #     torch.save(augmented_val[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_val.pt')
+    # for transformation in augmented_train:
+    #     torch.save(augmented_test[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_test.pt')
 
-    print(f'Saved augmented datasets to {SAVE_DIR}')
-
-    return train, test, val
+    # print(f'Saved augmented datasets to {SAVE_DIR}')
 
 
 if __name__== '__main__':

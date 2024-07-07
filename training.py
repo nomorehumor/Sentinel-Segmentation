@@ -5,7 +5,7 @@ import torch.optim as optim
 from matplotlib import pyplot as plt
 
 
-def train(model, train_loader, val_loader, lr, num_epochs, device, early_stopping):
+def train(model, train_loader, val_loader, lr, num_epochs, device, early_stopping, lr_scheduling):
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
@@ -33,7 +33,9 @@ def train(model, train_loader, val_loader, lr, num_epochs, device, early_stoppin
             epoch_accuracy += calculate_overlap_metrics(outputs, labels)[1]
         
         val_loss, val_accuracy = evaluate(model, criterion, val_loader, device)
-        # scheduler.step(val_loss)
+        
+        if lr_scheduling:
+            scheduler.step(val_loss)
 
         print(f"""Epoch {epoch+1}/{num_epochs}, Training Loss: {epoch_loss/len(train_loader)}, Training Accuracy: {epoch_accuracy/len(train_loader)}, 
               Validation Loss: {val_loss}, Validation Accuracy: {val_accuracy}""")
