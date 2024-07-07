@@ -27,9 +27,11 @@ def run_pipeline():
     lr = 0.001
     num_epochs = 30
     augmented = False
-    augmentation_type = 'rotate_reflect'
+    augmentation_type = ''
     patch_size = 32
     batch_size = 32
+    dropout_rate = 0
+    early_stopping = False
 
     dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
 
@@ -42,7 +44,7 @@ def run_pipeline():
 
     train_loader, val_loader, test_loader = load_data(dataset_name)
 
-    model = SegmentationModel(num_channels=C)
+    model = SegmentationModel(num_channels=C, dropout_rate=0)
     # model = smp.Unet(
     #     encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
     #     encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
@@ -57,26 +59,31 @@ def run_pipeline():
 
     metrics = test(model, test_loader=test_loader, device=device, plot=False)
 
-    save(model, patch_size, augmented, augmentation_type, batch_size, num_epochs, lr, C, metrics)
+    save(model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, num_epochs, lr,  metrics)
 
 
-def save(model, patch_size, augmented, augmentation_type, batch_size, epochs, lr, C, metrics):
+def save(model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, epochs, lr, metrics):
     timestamp = datetime.now().strftime('%d%m_%H%M')
 
-    saved_params = {}
-    saved_params['patch_size'] = patch_size
-    saved_params['augmented'] = augmented
-    saved_params['augmentation_type'] = augmentation_type
-    saved_params['batch_size'] = batch_size
-    saved_params['learning_rate'] = lr
-    saved_params['number_of_epochs'] = epochs
-    saved_params['number_of_channels'] = C
-    saved_params['pixel_accuracy'] = metrics[0].item()
-    saved_params['dice_coefficient'] = metrics[1].item()
-    saved_params['precision'] = metrics[2].item()
-    saved_params['specificity'] = metrics[3].item()
-    saved_params['recall'] = metrics[4].item()
-    saved_params['iou'] = metrics[5].item()
+    saved_params = {
+        'number_of_channels': C,
+        'patch_size': patch_size,
+        'augmented': augmented,
+        'augmentation_type': augmentation_type,
+        'batch_size': batch_size,
+        'dropout_rate': dropout_rate,
+        'early_stopping': early_stopping,
+        'learning_rate': lr,
+        'number_of_epochs': epochs,
+        'pixel_accuracy': metrics[0],
+        'dice_coefficient': metrics[1],
+        'precision': metrics[2],
+        'specificity': metrics[3],
+        'recall': metrics[4],
+        'iou': metrics[5]
+    }
+
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     json_txt = json.dumps(saved_params, indent=4)
     json_path = MODELS_DIR / f'params_{timestamp}.json'

@@ -3,10 +3,10 @@ import torch
 from torch.nn.functional import relu
 
 class SegmentationModel(nn.Module):
-    def __init__(self, num_channels=3):
+    def __init__(self, num_channels=4, dropout_rate=0.2):
         super(SegmentationModel, self).__init__()
         self.conv1 = nn.Conv2d(num_channels, 32, kernel_size=3, padding=1)
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(dropout_rate)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.conv4 = nn.Conv2d(128, 1, kernel_size=1, padding=0)
@@ -14,15 +14,15 @@ class SegmentationModel(nn.Module):
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = self.relu(self.conv2(x))
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = self.relu(self.conv3(x))
         x = self.conv4(x)
         return x
 
 class UNet(nn.Module):
-    def __init__(self, n_class):
+    def __init__(self, num_channels = 4, n_class=1):
         super().__init__()
         
         # Encoder
@@ -30,7 +30,7 @@ class UNet(nn.Module):
         # Each block in the encoder consists of two convolutional layers followed by a max-pooling layer, with the exception of the last block which does not include a max-pooling layer.
         # -------
         # input: 572x572x3
-        self.e11 = nn.Conv2d(4, 64, kernel_size=3, padding=1) # output: 570x570x64
+        self.e11 = nn.Conv2d(num_channels, 64, kernel_size=3, padding=1) # output: 570x570x64
         self.e12 = nn.Conv2d(64, 64, kernel_size=3, padding=1) # output: 568x568x64
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2) # output: 284x284x64
 
