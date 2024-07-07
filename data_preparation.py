@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import TensorDataset
+from torch.utils.data import TensorDataset, ConcatDataset
 import rasterio
 import numpy as np
 from matplotlib import pyplot as plt
@@ -11,21 +11,20 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, TRAINING_DATASET_DIR
+from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, TRAIN_PATCH_SIZE, TRAINING_DATASET_DIR
 
 def create_dataset():
-    patch_size = 32
-    patches = torch.empty(0, patch_size, patch_size, 6)
+    patches = torch.empty(0, TRAIN_PATCH_SIZE, TRAIN_PATCH_SIZE, 6)
     for city in CITIES:
         print(city)
         city_path = city.split(",")[0].lower()
         preprocess_tensor = load_city_bands(city_path)
-        city_patches = create_patches(preprocess_tensor, patch_size)
+        city_patches = create_patches(preprocess_tensor, TRAIN_PATCH_SIZE)
         
-        patches_cat = torch.empty(patches.shape[0] + city_patches.shape[0], patch_size, patch_size, 6)
+        patches_cat = torch.empty(patches.shape[0] + city_patches.shape[0], TRAIN_PATCH_SIZE, TRAIN_PATCH_SIZE, 6)
         torch.cat((patches, city_patches), dim=0, out=patches_cat)
         patches = patches_cat
-    create_torch_dataset(patches, patch_size)
+    create_torch_dataset(patches, TRAIN_PATCH_SIZE)
     
 
 def normalize(img):
@@ -120,9 +119,10 @@ def evaluate_dataset_positive_classes(dataset_label_tensors):
     return np.count_nonzero(flattened_dataset) / len(flattened_dataset)
 
 
-def create_dataset_sets(input_tensor, output_tensor):
+def create_dataset_sets(input_tensor, output_tensor, augment=False):
     output_tensor_flat = output_tensor.view(output_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
     splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    
     for train_val_idx, test_idx in splitter.split(np.zeros(len(input_tensor)), output_tensor_flat):
         inputs_train_val, inputs_test = input_tensor[train_val_idx], input_tensor[test_idx]
         output_train_val, output_test = output_tensor[train_val_idx], output_tensor[test_idx]
@@ -134,7 +134,7 @@ def create_dataset_sets(input_tensor, output_tensor):
     
     print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(output_train))
     print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(output_test))
-    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(output_val))
+    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(output_val))        
 
     train = TensorDataset(inputs_train, output_train)
     val = TensorDataset(inputs_val, output_val)
@@ -155,7 +155,7 @@ def normalize_data(data, channels=[]):
     transform(data)
     
 
-def create_torch_dataset(patches, patch_size):
+def create_torch_dataset(patches, patch_size, augmented=True):
     valid_patches = []
     for i in range(len(patches)):
         if not is_cloud_present(patches[i]):
@@ -170,24 +170,26 @@ def create_torch_dataset(patches, patch_size):
     train, val, test = create_dataset_sets(input_tensor, output_tensor)
 
     TRAINING_DATASET_DIR.mkdir(parents=True, exist_ok=True)
-    torch.save(train, TRAINING_DATASET_DIR /  f'{str(patch_size)}_train.pt')
-    torch.save(val, TRAINING_DATASET_DIR / f'{str(patch_size)}_val.pt')
-    torch.save(test, TRAINING_DATASET_DIR / f'{str(patch_size)}_test.pt')
 
+    if augmented:
+        print("Length of train before augmentation: ", len(train))
+        augmented_train = augment_dataset(train)
+        for transformation, dataset in augmented_train.items():
+            train = ConcatDataset([train, dataset])
+    
+    dataset_name = f"{patch_size}"
+    if augmented:
+        dataset_name += "_" + "-".join(list(augmented_train.keys()))
+
+    print("Length of train dataset:", len(train))
+    print("Length of val dataset:", len(val))
+    print("Length of test dataset:", len(test))
+    torch.save(train, TRAINING_DATASET_DIR /  f'{dataset_name}_train.pt')
+    torch.save(val, TRAINING_DATASET_DIR / f'{dataset_name}_val.pt')
+    torch.save(test, TRAINING_DATASET_DIR / f'{dataset_name}_test.pt')
+    
+    print("Dataset name:", dataset_name)
     print(f'Saved datasets to {TRAINING_DATASET_DIR}')
-
-    # augmented_train = augment_dataset(train)
-    # augmented_val = augment_dataset(val)
-    # augmented_test = augment_dataset(test)
-
-    # for transformation in augmented_train:
-    #     torch.save(augmented_train[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_train.pt')
-    # for transformation in augmented_train:
-    #     torch.save(augmented_val[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_val.pt')
-    # for transformation in augmented_train:
-    #     torch.save(augmented_test[transformation], SAVE_DIR / f'{str(patch_size)}_augmented_{str(transformation)}_test.pt')
-
-    # print(f'Saved augmented datasets to {SAVE_DIR}')
 
 
 if __name__== '__main__':

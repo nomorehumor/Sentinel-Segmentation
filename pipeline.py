@@ -27,16 +27,17 @@ def run_pipeline():
     C = 4
     lr = 0.001
     num_epochs = 30
-    augmented = False
+    augmented = True
     augmentation_type = ''
     patch_size = 64
     batch_size = 32
     dropout_rate = 0.2
     early_stopping = True
     lr_scheduling = True
+    dataset_name = "64_rotate_reflect-reflect_affine-rotate_zoom-all"
 
-    dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
-
+    # dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
+    
     if torch.cuda.is_available():
         device = torch.device('cuda')
     elif torch.backends.mps.is_available():

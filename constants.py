@@ -10,4 +10,6 @@ MODELS_DIR = RESULTS_DIR / "models"
 PARAMS_DIR = RESULTS_DIR / "params"
 
 CITIES = ["Bologna, Italy", "Milan, Italy", "Split, Croatia", "Valencia, Spain", "Oslo, Norway", "Krasnodar, Russia", "Paris, France", "Barcelona, Spain", "Berlin, Germany", "Karlsruhe, Germany"]
+TRAIN_PATCH_SIZE = 64
+# CITIES = ["Bologna, Italy"]
 
