@@ -2,14 +2,14 @@ from datetime import datetime
 import json
 import torch
 from torch.utils.data import DataLoader
-from model import SegmentationModel, UNet
+from model import SegmentationModel, UNet, EnhancedUNet
 from training import train, test
 from constants import TRAINING_DATASET_DIR, MODELS_DIR, PARAMS_DIR, RESULTS_DIR
 import warnings
 warnings.filterwarnings("ignore")
 
 
-def load_data(dataset_name,  batch_size=32):
+def load_data(dataset_name, batch_size=32):
     print(f'Loading datasets {dataset_name}_train _val _test')
 
     train = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_train.pt')
@@ -34,7 +34,7 @@ def run_pipeline():
     dropout_rate = 0.2
     early_stopping = True
     lr_scheduling = True
-    dataset_name = "64_rotate_reflect-reflect_affine-rotate_zoom-all"
+    dataset_name = "64_rotation"
 
     # dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
     
@@ -49,6 +49,8 @@ def run_pipeline():
 
     if model_type == 'unet':
         model = UNet(num_channels=C, n_class=1)
+    elif model_type == 'enhanced_unet':
+        model = EnhancedUNet(num_channels=C, n_class=1)
     else:
         model = SegmentationModel(num_channels=C, dropout_rate=dropout_rate)
 
