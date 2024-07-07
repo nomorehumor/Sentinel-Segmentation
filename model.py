@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch
-from torchvision import models
 from torch.nn.functional import relu
 
 class SegmentationModel(nn.Module):
@@ -31,7 +30,7 @@ class UNet(nn.Module):
         # Each block in the encoder consists of two convolutional layers followed by a max-pooling layer, with the exception of the last block which does not include a max-pooling layer.
         # -------
         # input: 572x572x3
-        self.e11 = nn.Conv2d(3, 64, kernel_size=3, padding=1) # output: 570x570x64
+        self.e11 = nn.Conv2d(4, 64, kernel_size=3, padding=1) # output: 570x570x64
         self.e12 = nn.Conv2d(64, 64, kernel_size=3, padding=1) # output: 568x568x64
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2) # output: 284x284x64
 

@@ -1,4 +1,3 @@
-from datetime import datetime
 import torch.nn as nn
 import torch
 import torch.optim as optim
@@ -112,13 +111,6 @@ def evaluate(model, criterion, val_loader, device):
             val_loss += loss.item()
             val_accuracy += calculate_overlap_metrics(outputs, labels)[1]       
     return val_loss / len(val_loader), val_accuracy / len(val_loader)
-
-
-def accuracy(outputs, labels, threshold=0.5):
-    preds = torch.sigmoid(outputs) > threshold 
-    correct = (preds == labels).float()
-    accuracy = correct.sum() / correct.numel()
-    return accuracy.item()
 
 
 def plot_results(num_images, images_list, labels_list, preds_list):
