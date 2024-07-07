@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 from model import SegmentationModel, UNet
 from training import train, test
-from constants import SAVE_DIR, MODELS_DIR
+from constants import TRAINING_DATASET_DIR, MODELS_DIR, PARAMS_DIR
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -12,17 +12,18 @@ warnings.filterwarnings("ignore")
 def load_data(dataset_name,  batch_size=32):
     print(f'Loading datasets {dataset_name}')
 
-    train = torch.load(SAVE_DIR / f'{dataset_name}_train.pt')
+    train = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_train.pt')
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True)
-    val = torch.load(SAVE_DIR / f'{dataset_name}_val.pt')
+    val = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_val.pt')
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False)
-    test = torch.load(SAVE_DIR / f'{dataset_name}_test.pt')
+    test = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_test.pt')
     test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader
 
 
 def run_pipeline():
+    model_type = 'simple'
     C = 4
     lr = 0.001
     num_epochs = 30
@@ -44,7 +45,11 @@ def run_pipeline():
 
     train_loader, val_loader, test_loader = load_data(dataset_name)
 
-    model = SegmentationModel(num_channels=C, dropout_rate=0)
+    if model_type == 'unet':
+        model = UNet(num_channels=C, n_class=1)
+    else:
+        model = SegmentationModel(num_channels=C, dropout_rate=0)
+
     # model = smp.Unet(
     #     encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
     #     encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
@@ -52,17 +57,16 @@ def run_pipeline():
     #     classes=1,                      # model output channels (number of classes in your dataset)
     # )
 
-    # model = UNet(n_class=1)
     model.to(device)
 
     model = train(model, train_loader=train_loader, val_loader=val_loader, lr=lr, num_epochs=num_epochs, device=device)
 
     metrics = test(model, test_loader=test_loader, device=device, plot=False)
 
-    save(model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, num_epochs, lr,  metrics)
+    save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, num_epochs, lr,  metrics)
 
 
-def save(model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, epochs, lr, metrics):
+def save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, early_stopping, epochs, lr, metrics):
     timestamp = datetime.now().strftime('%d%m_%H%M')
 
     saved_params = {
@@ -71,10 +75,11 @@ def save(model, C, patch_size, augmented, augmentation_type, batch_size, dropout
         'augmented': augmented,
         'augmentation_type': augmentation_type,
         'batch_size': batch_size,
-        'dropout_rate': dropout_rate,
-        'early_stopping': early_stopping,
+        'model_type': model_type,
         'learning_rate': lr,
         'number_of_epochs': epochs,
+        'dropout_rate': dropout_rate,
+        'early_stopping': early_stopping,
         'pixel_accuracy': metrics[0],
         'dice_coefficient': metrics[1],
         'precision': metrics[2],
@@ -83,15 +88,16 @@ def save(model, C, patch_size, augmented, augmentation_type, batch_size, dropout
         'iou': metrics[5]
     }
 
+    PARAMS_DIR.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     json_txt = json.dumps(saved_params, indent=4)
-    json_path = MODELS_DIR / f'params_{timestamp}.json'
+    json_path = PARAMS_DIR / f'{model_type}_{timestamp}.json'
     
     with open(json_path, "w") as file: 
         file.write(json_txt)
 
-    model_path = MODELS_DIR / f'model_{timestamp}_{epochs}_{metrics[1]:5.4f}'
+    model_path = MODELS_DIR / f'{model_type}_{timestamp}_{epochs}_{metrics[1]:5.4f}'
     torch.save(model.state_dict(), model_path)  
 
 
