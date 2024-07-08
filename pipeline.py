@@ -26,14 +26,14 @@ def run_pipeline():
     model_type = 'simple'
     C = 4
     lr = 0.001
-    num_epochs = 50
+    num_epochs = 30
     augmented = False
     augmentation_type = ''
     patch_size = 64
     batch_size = 32
     dropout_rate = 0
-    early_stopping = True
-    lr_scheduling = True
+    early_stopping = False
+    lr_scheduling = False
     # dataset_name = "64_rotation"
 
     dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
@@ -52,7 +52,6 @@ def run_pipeline():
     else:
         model = SegmentationModel(num_channels=C, dropout_rate=dropout_rate)
 
-
     model.to(device)
 
     model = train(model, 
@@ -64,7 +63,7 @@ def run_pipeline():
                   early_stopping=early_stopping,
                   lr_scheduling=lr_scheduling)
 
-    metrics = test(model, test_loader=test_loader, device=device, plot=False)
+    metrics = test(model, test_loader=test_loader, device=device, plot=True)
 
     save(model_type, model, C, patch_size, augmented, augmentation_type, batch_size, dropout_rate, \
           early_stopping, lr_scheduling, num_epochs, lr,  metrics)

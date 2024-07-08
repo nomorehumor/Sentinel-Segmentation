@@ -7,7 +7,6 @@ from constants import TRAIN_PATCH_SIZE
 class SegmentationModel(nn.Module):
     def __init__(self, num_channels=4, dropout_rate=0.2):
         super(SegmentationModel, self).__init__()
-        self.target_size = TRAIN_PATCH_SIZE
         self.conv1 = nn.Conv2d(num_channels, 32, kernel_size=3, padding=1)
         self.dropout = nn.Dropout(dropout_rate)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
@@ -16,7 +15,6 @@ class SegmentationModel(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        x = F.interpolate(x, size=self.target_size, mode='bilinear', align_corners=False)
         x = self.relu(self.conv1(x))
         # x = self.dropout(x)
         x = self.relu(self.conv2(x))

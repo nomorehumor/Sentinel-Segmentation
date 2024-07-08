@@ -61,46 +61,33 @@ def test(model, test_loader, device, plot=False):
     model.eval()
     criterion = nn.BCEWithLogitsLoss()
     test_loss = 0
-    test_pixel_accuracy, test_dice, test_precision, test_specificity, test_recall, test_iou = 0, 0, 0, 0, 0, 0
-    images_list, labels_list, preds_list = [], [], []
+    test_pixel_accuracy, test_dice, test_precision, test_recall, test_iou = 0, 0, 0, 0, 0
 
     with torch.no_grad():
-        for images, labels in test_loader:
-            images, labels = images.float().to(device), labels.float().to(device)
-            labels = labels.unsqueeze(1) 
-            outputs = model(images)
-            labels_resized = F.interpolate(labels, size=outputs.shape[2:], mode='nearest')
-            loss = criterion(outputs, labels_resized)
-            test_loss += loss.item()
-            
-            metrics = calculate_overlap_metrics(outputs, labels_resized)
+        image, label = next(iter(test_loader))
+        image, label = image.float().to(device), label.float().to(device)
+        label = label.unsqueeze(1) 
+        outputs = model(image)
+        label_resized=label
+        loss = criterion(outputs, label_resized)
+        test_loss += loss.item()
+        
+        metrics = calculate_overlap_metrics(outputs, label_resized)
 
-            test_pixel_accuracy += metrics[0]
-            test_dice += metrics[1]
-            test_precision += metrics[2]
-            test_specificity += metrics[3]
-            test_recall += metrics[4]
-            test_iou += metrics[5]
-            
-            preds = torch.sigmoid(outputs) > 0.5 
-            
-            images_list.append(images.cpu())
-            labels_list.append(labels.cpu())
-            preds_list.append(preds.cpu())
+        test_pixel_accuracy = metrics[0]
+        test_dice = metrics[1]
+        test_precision = metrics[2]
+        test_recall = metrics[3]
+        test_iou = metrics[4]
+        
+        preds = torch.sigmoid(outputs) > 0.5 
     
-    avg_test_loss = test_loss / len(test_loader)
-    avg_test_dice = test_dice / len(test_loader)
-    
-    print(f"Test Loss: {avg_test_loss}, Test Accuracy: {avg_test_dice}")
+    print(f"Test Loss: {test_loss}, Test Accuracy: {test_dice}")
     
     if plot:
-        images_list = torch.cat(images_list)
-        labels_list = torch.cat(labels_list)
-        preds_list = torch.cat(preds_list)
-        plot_results(images_list, labels_list, preds_list) 
+        plot_results(image, label, preds) 
 
-    return test_pixel_accuracy / len(test_loader), test_dice / len(test_loader), test_precision / len(test_loader), \
-    test_specificity / len(test_loader), test_recall / len(test_loader), test_iou / len(test_loader)
+    return test_pixel_accuracy, test_dice , test_precision, test_recall,  test_iou 
 
 
 def evaluate(model, criterion, val_loader, device):
@@ -119,28 +106,20 @@ def evaluate(model, criterion, val_loader, device):
     return val_loss / len(val_loader), val_accuracy / len(val_loader)
 
 
-def plot_results(num_images, images_list, labels_list, preds_list):
+def plot_results(image, label, pred):
 
-    _, axes = plt.subplots(num_images, 3, figsize=(15, num_images * 5))
-    for i in range(num_images):
-        img = images_list[i].permute(1, 2, 0) 
-        label = labels_list[i].squeeze(0)
-        pred = preds_list[i].squeeze(0)
+    _, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-        if num_images == 1:
-            axes[0].imshow(img.numpy())
-            axes[0].set_title('Image')
-            axes[1].imshow(label.numpy(), cmap='gray')
-            axes[1].set_title('Ground Truth')
-            axes[2].imshow(pred.numpy(), cmap='gray')
-            axes[2].set_title('Prediction')
-        else:
-            axes[i, 0].imshow(img.numpy())
-            axes[i, 0].set_title('Image')
-            axes[i, 1].imshow(label.numpy(), cmap='gray')
-            axes[i, 1].set_title('Ground Truth')
-            axes[i, 2].imshow(pred.numpy(), cmap='gray')
-            axes[i, 2].set_title('Prediction')
+    image = image.squeeze(0).permute(1,2,0).numpy()
+    label = label.squeeze(1).squeeze(0).numpy()
+    pred = pred.squeeze(1).squeeze(0).numpy()
+
+    axes[0].imshow(image)
+    axes[0].set_title('Image of Berlin')
+    axes[1].imshow(label, cmap='gray')
+    axes[1].set_title('Ground Truth')
+    axes[2].imshow(pred, cmap='gray')
+    axes[2].set_title('Prediction')
     
     plt.tight_layout()
     plt.show()
