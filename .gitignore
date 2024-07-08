@@ -8,3 +8,6 @@ __pycache__
 # Datasets
 datasets/
 osm_data/
+
+# Models
+results/

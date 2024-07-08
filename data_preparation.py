@@ -8,6 +8,8 @@ from augmentation import augment_dataset
 from sklearn.model_selection import StratifiedShuffleSplit
 from torchvision import transforms
 import warnings
+from utils import *
+
 warnings.filterwarnings("ignore")
 
 from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, TRAIN_PATCH_SIZE, TRAINING_DATASET_DIR
@@ -48,22 +50,7 @@ def create_dataset():
 
     create_torch_dataset(train_tensor, val_tensor, test_tensor, TRAIN_PATCH_SIZE)
 
-def normalize(img):
-    masked_data = np.ma.masked_equal(img, 0)
-    lq, uq = np.quantile(masked_data.compressed(), (0.01, 0.99))
-    image_norm = np.clip(img, a_min=lq, a_max=uq)
-    image_norm = (image_norm - lq) / (uq - lq)
-    return image_norm
 
-def vis(img, quant_norm=True):
-    if quant_norm:
-        data = normalize(img)
-    else:
-        data = img
-    if data.ndim == 2:
-        plt.imshow(data, cmap="gray")
-    elif data.ndim == 3:
-        plt.imshow(data)
 
 def load_city_bands(city_path):
     with rasterio.open(SENTINEL_DATASET_DIR / city_path / "R.tiff") as f:
@@ -121,9 +108,7 @@ def create_patches(preprocess_tensor, patch_size, plot=False, relax_criteria=Fal
 
     return torch.stack(valid_patches)
 
-def evaluate_dataset_positive_classes(dataset_label_tensors):
-    flattened_dataset = dataset_label_tensors.flatten()
-    return np.count_nonzero(flattened_dataset) / len(flattened_dataset)
+
 
 
 def normalize_data(data, channels=[]):

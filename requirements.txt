@@ -197,3 +197,4 @@ wrapt==1.16.0
 xarray==2024.6.0
 xyzservices==2023.10.1
 zipp==3.17.0
+segmentation_models_pytorch
