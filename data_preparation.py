@@ -13,8 +13,7 @@ warnings.filterwarnings("ignore")
 from constants import SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, TRAIN_PATCH_SIZE, TRAINING_DATASET_DIR
 
 def create_dataset():
-    train_data = []
-    val_data = []
+    train_val_data = []
     test_data = []
 
     for city in CITIES:
@@ -29,16 +28,25 @@ def create_dataset():
             if len(city_patches) == 0:
                 print(f"No valid patches found for {city}, adjusting criteria")
                 city_patches = create_patches(preprocess_tensor, TRAIN_PATCH_SIZE, relax_criteria=True)
-            train_val_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-            city_labels = city_patches[:, :, :, 4].view(city_patches.size(0), -1).mean(dim=1).numpy().round().astype(int)
+        train_val_data.append(city_patches)
 
-            for train_idx, val_idx in train_val_split.split(np.zeros(len(city_patches)), city_labels):
-                train_data.append(city_patches[train_idx])
-                val_data.append(city_patches[val_idx])
+    all_train_val_patches = torch.cat(train_val_data, dim=0)
+    labels = all_train_val_patches[:, :, :, 4].view(all_train_val_patches.size(0), -1).mean(dim=1).numpy().round().astype(int)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 
-    train_tensor = torch.cat(train_data, dim=0)
-    val_tensor = torch.cat(val_data, dim=0)
+    for train_idx, val_idx in splitter.split(np.zeros(len(all_train_val_patches)), labels):
+        train_tensor = all_train_val_patches[train_idx]
+        val_tensor = all_train_val_patches[val_idx]
+
+        train_labels = labels[train_idx]
+        val_labels = labels[val_idx]   
+
     test_tensor = torch.cat(test_data, dim=0).unsqueeze(0)
+    test_labels = test_tensor[:, :, :, 4].view(test_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
+
+    print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(train_labels))
+    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(val_labels))     
+    # print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(test_labels))     
 
     create_torch_dataset(train_tensor, val_tensor, test_tensor, TRAIN_PATCH_SIZE)
 
@@ -119,28 +127,6 @@ def evaluate_dataset_positive_classes(dataset_label_tensors):
     flattened_dataset = dataset_label_tensors.flatten()
     return np.count_nonzero(flattened_dataset) / len(flattened_dataset)
 
-# def create_dataset_sets(input_tensor, output_tensor, augment=False):
-#     output_tensor_flat = output_tensor.view(output_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
-#     splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-    
-#     for train_val_idx, test_idx in splitter.split(np.zeros(len(input_tensor)), output_tensor_flat):
-#         inputs_train_val, inputs_test = input_tensor[train_val_idx], input_tensor[test_idx]
-#         output_train_val, output_test = output_tensor[train_val_idx], output_tensor[test_idx]
-        
-#     splitter_train_val = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
-#     for train_idx, val_idx in splitter_train_val.split(np.zeros(len(inputs_train_val)), output_train_val.view(output_train_val.size(0), -1).mean(dim=1).numpy().round().astype(int)):
-#         inputs_train, inputs_val = inputs_train_val[train_idx], inputs_train_val[val_idx]
-#         output_train, output_val = output_train_val[train_idx], output_train_val[val_idx]
-    
-#     print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(output_train))
-#     print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(output_test))
-#     print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(output_val))        
-
-#     train = TensorDataset(inputs_train, output_train)
-#     val = TensorDataset(inputs_val, output_val)
-#     test = TensorDataset(inputs_test, output_test)
-    
-#     return train, val, test
 
 def normalize_data(data, channels=[]):
     means = []
