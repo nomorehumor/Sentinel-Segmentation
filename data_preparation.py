@@ -51,7 +51,6 @@ def create_dataset():
     create_torch_dataset(train_tensor, val_tensor, test_tensor, TRAIN_PATCH_SIZE)
 
 
-
 def load_city_bands(city_path):
     with rasterio.open(SENTINEL_DATASET_DIR / city_path / "R.tiff") as f:
         r_data = np.transpose(f.read(), (1,2,0)).squeeze()
@@ -65,7 +64,7 @@ def load_city_bands(city_path):
     with rasterio.open(BUILDING_DATASET_DIR / city_path / "footprint.tiff") as f:
         building_data = np.transpose(f.read(), (1,2,0)).squeeze()
 
-    all_bands = np.stack([normalize(r_data), normalize(g_data), normalize(b_data), normalize(ir_data)], axis=-1)
+    all_bands = np.stack([quantile_normalize(r_data), quantile_normalize(g_data), quantile_normalize(b_data), quantile_normalize(ir_data)], axis=-1)
 
     stacked_data = np.stack([ir_data, r_data, g_data, b_data], axis=-1).reshape(-1, 4)
     kmeans = KMeans(n_clusters=2, random_state=0).fit(stacked_data)
@@ -79,12 +78,12 @@ def load_city_bands(city_path):
 
     return preprocess_tensor
 
+
 def is_cloud_present(img, threshold=2000):
     return np.count_nonzero(img[:,:,5] == False) > threshold
 
-def create_patches(preprocess_tensor, patch_size, plot=False, relax_criteria=False):
-    image_height, image_width = preprocess_tensor.size()[:2]
 
+def create_patches(preprocess_tensor, patch_size, plot=False, relax_criteria=False):
     patches_grid = preprocess_tensor.unfold(0, patch_size, patch_size).unfold(1, patch_size, patch_size).permute(0,1,3,4,2)
     patches_num_x, patches_num_y = patches_grid.size()[:2]
     patches = patches_grid.flatten(start_dim=0, end_dim=1)
@@ -109,8 +108,6 @@ def create_patches(preprocess_tensor, patch_size, plot=False, relax_criteria=Fal
     return torch.stack(valid_patches)
 
 
-
-
 def normalize_data(data, channels=[]):
     means = []
     stds = []
@@ -122,6 +119,7 @@ def normalize_data(data, channels=[]):
         transforms.Normalize(means, stds, inplace=True)
     ])
     transform(data)
+    
 
 def create_torch_dataset(train_tensor, val_tensor, test_tensor, patch_size, augmented=False):
     input_train_tensor = train_tensor[:, :, :, :4].permute(0, 3, 1, 2)
