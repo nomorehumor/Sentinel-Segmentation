@@ -27,7 +27,7 @@ def create_dataset():
         else:
             city_patches = create_patches(preprocess_tensor, TRAIN_PATCH_SIZE)
             if len(city_patches) == 0:
-                print(f"No valid patches found for {city}, adjusting criteria...")
+                print(f"No valid patches found for {city}, adjusting criteria")
                 city_patches = create_patches(preprocess_tensor, TRAIN_PATCH_SIZE, relax_criteria=True)
             train_val_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
             city_labels = city_patches[:, :, :, 4].view(city_patches.size(0), -1).mean(dim=1).numpy().round().astype(int)
@@ -38,8 +38,8 @@ def create_dataset():
 
     train_tensor = torch.cat(train_data, dim=0)
     val_tensor = torch.cat(val_data, dim=0)
-    test_tensor = torch.cat(test_data, dim=0).unsqueeze(dim=0)
-    print(test_tensor.size())
+    test_tensor = torch.cat(test_data, dim=0).unsqueeze(0)
+
     create_torch_dataset(train_tensor, val_tensor, test_tensor, TRAIN_PATCH_SIZE)
 
 def normalize(img):
@@ -119,28 +119,28 @@ def evaluate_dataset_positive_classes(dataset_label_tensors):
     flattened_dataset = dataset_label_tensors.flatten()
     return np.count_nonzero(flattened_dataset) / len(flattened_dataset)
 
-def create_dataset_sets(input_tensor, output_tensor, augment=False):
-    output_tensor_flat = output_tensor.view(output_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+# def create_dataset_sets(input_tensor, output_tensor, augment=False):
+#     output_tensor_flat = output_tensor.view(output_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
+#     splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
     
-    for train_val_idx, test_idx in splitter.split(np.zeros(len(input_tensor)), output_tensor_flat):
-        inputs_train_val, inputs_test = input_tensor[train_val_idx], input_tensor[test_idx]
-        output_train_val, output_test = output_tensor[train_val_idx], output_tensor[test_idx]
+#     for train_val_idx, test_idx in splitter.split(np.zeros(len(input_tensor)), output_tensor_flat):
+#         inputs_train_val, inputs_test = input_tensor[train_val_idx], input_tensor[test_idx]
+#         output_train_val, output_test = output_tensor[train_val_idx], output_tensor[test_idx]
         
-    splitter_train_val = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
-    for train_idx, val_idx in splitter_train_val.split(np.zeros(len(inputs_train_val)), output_train_val.view(output_train_val.size(0), -1).mean(dim=1).numpy().round().astype(int)):
-        inputs_train, inputs_val = inputs_train_val[train_idx], inputs_train_val[val_idx]
-        output_train, output_val = output_train_val[train_idx], output_train_val[val_idx]
+#     splitter_train_val = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
+#     for train_idx, val_idx in splitter_train_val.split(np.zeros(len(inputs_train_val)), output_train_val.view(output_train_val.size(0), -1).mean(dim=1).numpy().round().astype(int)):
+#         inputs_train, inputs_val = inputs_train_val[train_idx], inputs_train_val[val_idx]
+#         output_train, output_val = output_train_val[train_idx], output_train_val[val_idx]
     
-    print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(output_train))
-    print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(output_test))
-    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(output_val))        
+#     print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(output_train))
+#     print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(output_test))
+#     print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(output_val))        
 
-    train = TensorDataset(inputs_train, output_train)
-    val = TensorDataset(inputs_val, output_val)
-    test = TensorDataset(inputs_test, output_test)
+#     train = TensorDataset(inputs_train, output_train)
+#     val = TensorDataset(inputs_val, output_val)
+#     test = TensorDataset(inputs_test, output_test)
     
-    return train, val, test
+#     return train, val, test
 
 def normalize_data(data, channels=[]):
     means = []
@@ -163,7 +163,6 @@ def create_torch_dataset(train_tensor, val_tensor, test_tensor, patch_size, augm
     
     input_test_tensor = test_tensor[:, :, :, :4].permute(0, 3, 1, 2)
     output_test_tensor = test_tensor[:, :, :, 4]
-    print(input_test_tensor.size())
 
     normalize_data(input_train_tensor, [0,1,2,3])
     normalize_data(input_val_tensor, [0,1,2,3])

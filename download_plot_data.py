@@ -8,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 from matplotlib import pyplot as plt
 
-from constants import DATASET_DIR, SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES
+from constants import DATASET_DIR, SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, BERLIN_BBOX
 
 def normalize(img):
     masked_data = np.ma.masked_equal(img, 0)
@@ -95,13 +95,18 @@ def download_band_data(city, city_gdf, city_tqdm):
     print("Authenticating to OpenEO")
     connection = openeo.connect("openeo.dataspace.copernicus.eu")
     connection.authenticate_oidc()
+
+    if city == "berlin":
+        bbox = BERLIN_BBOX
+    else:     
     
-    bbox = {
-        "north": city_gdf.bbox_north[0],
-        "south": city_gdf.bbox_south[0],
-        "east": city_gdf.bbox_east[0],
-        "west": city_gdf.bbox_west[0]
-    }
+        bbox = {
+            "north": city_gdf.bbox_north[0],
+            "south": city_gdf.bbox_south[0],
+            "east": city_gdf.bbox_east[0],
+            "west": city_gdf.bbox_west[0]
+        }
+
     
     city_bands_dir = SENTINEL_DATASET_DIR / city.split(",")[0].lower()
     city_bands_dir.mkdir(parents=True, exist_ok=True)
@@ -116,12 +121,17 @@ def download_building_data(city, city_gdf):
     city_label_dir = BUILDING_DATASET_DIR / city.split(",")[0].lower()
     city_label_dir.mkdir(parents=True, exist_ok=True)
     
-    bbox = {
-        "north": city_gdf.bbox_north[0],
-        "south": city_gdf.bbox_south[0],
-        "east": city_gdf.bbox_east[0],
-        "west": city_gdf.bbox_west[0]
-    }
+    if city == "berlin":
+        bbox = BERLIN_BBOX
+    else:     
+    
+        bbox = {
+            "north": city_gdf.bbox_north[0],
+            "south": city_gdf.bbox_south[0],
+            "east": city_gdf.bbox_east[0],
+            "west": city_gdf.bbox_west[0]
+        }
+
     city_features = ox.features_from_bbox(north=bbox["north"], south=bbox["south"], east=bbox["east"], west=bbox["west"], tags={'building':True})
     rasterize_city_features(city_features, city_bands_dir, city_label_dir)
     
