@@ -9,7 +9,7 @@ RESULTS_DIR = Path("results")
 MODELS_DIR = RESULTS_DIR / "models"
 PARAMS_DIR = RESULTS_DIR / "params"
 
-CITIES = ["Bologna, Italy", "Milan, Italy", "Split, Croatia", "Valencia, Spain", "Oslo, Norway", "Krasnodar, Russia", "Paris, France", "Barcelona, Spain", "Berlin, Germany", "Karlsruhe, Germany"]
+CITIES = ["Bologna, Italy", "Milan, Italy", "Split, Croatia", "Valencia, Spain", "Oslo, Norway", "Krasnodar, Russia", "Paris, France", "Barcelona, Spain", "Berlin, Germany", "Karlsruhe, Germany", "Porto, Portugal"]
+
 TRAIN_PATCH_SIZE = 64
-# CITIES = ["Bologna, Italy"]
 

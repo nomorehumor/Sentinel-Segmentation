@@ -4,6 +4,9 @@ import torch.optim as optim
 
 from matplotlib import pyplot as plt
 
+import torch.nn.functional as F
+import warnings
+warnings.filterwarnings("ignore")
 
 def train(model, train_loader, val_loader, lr, num_epochs, device, early_stopping, lr_scheduling):
     criterion = nn.BCEWithLogitsLoss()
@@ -20,7 +23,7 @@ def train(model, train_loader, val_loader, lr, num_epochs, device, early_stoppin
         epoch_accuracy = 0
         for images, labels in train_loader:
             images, labels = images.float().to(device), labels.float().to(device)
-            labels = labels.unsqueeze(1)  # add channel dim
+            labels = labels.unsqueeze(1) 
 
             optimizer.zero_grad()
             
@@ -54,23 +57,23 @@ def train(model, train_loader, val_loader, lr, num_epochs, device, early_stoppin
     return model
 
 
-def test(model, test_loader, device, num_images=5, plot=True):
+def test(model, test_loader, device, plot=False):
     model.eval()
     criterion = nn.BCEWithLogitsLoss()
     test_loss = 0
     test_pixel_accuracy, test_dice, test_precision, test_specificity, test_recall, test_iou = 0, 0, 0, 0, 0, 0
-
     images_list, labels_list, preds_list = [], [], []
 
     with torch.no_grad():
         for images, labels in test_loader:
             images, labels = images.float().to(device), labels.float().to(device)
-            labels = labels.unsqueeze(1)  
+            labels = labels.unsqueeze(1) 
             outputs = model(images)
-            loss = criterion(outputs, labels)
+            labels_resized = F.interpolate(labels, size=outputs.shape[2:], mode='nearest')
+            loss = criterion(outputs, labels_resized)
             test_loss += loss.item()
             
-            metrics = calculate_overlap_metrics(outputs, labels)
+            metrics = calculate_overlap_metrics(outputs, labels_resized)
 
             test_pixel_accuracy += metrics[0]
             test_dice += metrics[1]
@@ -91,10 +94,10 @@ def test(model, test_loader, device, num_images=5, plot=True):
     print(f"Test Loss: {avg_test_loss}, Test Accuracy: {avg_test_dice}")
     
     if plot:
-        images_list = torch.cat(images_list)[:num_images]
-        labels_list = torch.cat(labels_list)[:num_images]
-        preds_list = torch.cat(preds_list)[:num_images]
-        plot_results(num_images, images_list, labels_list, preds_list) 
+        images_list = torch.cat(images_list)
+        labels_list = torch.cat(labels_list)
+        preds_list = torch.cat(preds_list)
+        plot_results(images_list, labels_list, preds_list) 
 
     return test_pixel_accuracy / len(test_loader), test_dice / len(test_loader), test_precision / len(test_loader), \
     test_specificity / len(test_loader), test_recall / len(test_loader), test_iou / len(test_loader)
@@ -158,7 +161,6 @@ def calculate_overlap_metrics(pred, gt):
     dice = (2 * tp + eps) / (2 * tp + fp + fn + eps)
     precision = (tp + eps) / (tp + fp + eps)
     recall = (tp + eps) / (tp + fn + eps)
-    specificity = (tn + eps) / (tn + fp + eps)
     iou = (tp + eps) / (tp + fp + fn + eps)
 
-    return pixel_acc, dice, precision, specificity, recall, iou
+    return pixel_acc, dice, precision, recall, iou

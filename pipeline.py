@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import torch
 from torch.utils.data import DataLoader
-from model import SegmentationModel, UNet, EnhancedUNet
+from model import SegmentationModel, UNet
 from training import train, test
 from constants import TRAINING_DATASET_DIR, MODELS_DIR, PARAMS_DIR, RESULTS_DIR
 import warnings
@@ -17,7 +17,7 @@ def load_data(dataset_name, batch_size=32):
     val = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_val.pt')
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False)
     test = torch.load(TRAINING_DATASET_DIR / f'{dataset_name}_test.pt')
-    test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test, batch_size=1, shuffle=False)
 
     return train_loader, val_loader, test_loader
 
@@ -26,12 +26,12 @@ def run_pipeline():
     model_type = 'simple'
     C = 4
     lr = 0.001
-    num_epochs = 30
-    augmented = True
+    num_epochs = 50
+    augmented = False
     augmentation_type = ''
     patch_size = 64
     batch_size = 32
-    dropout_rate = 0.2
+    dropout_rate = 0
     early_stopping = True
     lr_scheduling = True
     # dataset_name = "64_rotation"
@@ -49,8 +49,6 @@ def run_pipeline():
 
     if model_type == 'unet':
         model = UNet(num_channels=C, n_class=1, dropout_rate=dropout_rate)
-    elif model_type == 'enhanced_unet':
-        model = EnhancedUNet(num_channels=C, n_class=1)
     else:
         model = SegmentationModel(num_channels=C, dropout_rate=dropout_rate)
 
@@ -92,9 +90,8 @@ def save(model_type, model, C, patch_size, augmented, augmentation_type, batch_s
         'pixel_accuracy': metrics[0].item(),
         'dice_coefficient': metrics[1].item(),
         'precision': metrics[2].item(),
-        'specificity': metrics[3].item(),
-        'recall': metrics[4].item(),
-        'iou': metrics[5].item()
+        'recall': metrics[3].item(),
+        'iou': metrics[4].item()
     }
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

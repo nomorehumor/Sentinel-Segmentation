@@ -2,9 +2,12 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
+from constants import TRAIN_PATCH_SIZE
+
 class SegmentationModel(nn.Module):
     def __init__(self, num_channels=4, dropout_rate=0.2):
         super(SegmentationModel, self).__init__()
+        self.target_size = TRAIN_PATCH_SIZE
         self.conv1 = nn.Conv2d(num_channels, 32, kernel_size=3, padding=1)
         self.dropout = nn.Dropout(dropout_rate)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
@@ -13,10 +16,11 @@ class SegmentationModel(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        x = F.interpolate(x, size=self.target_size, mode='bilinear', align_corners=False)
         x = self.relu(self.conv1(x))
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = self.relu(self.conv2(x))
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = self.relu(self.conv3(x))
         x = self.conv4(x)
         return x
@@ -129,101 +133,4 @@ class UNet(nn.Module):
         out = self.outconv(xd42)
 
         return out    
-    
-        
-
-class EnhancedUNet(nn.Module):
-    def __init__(self, num_channels=4, n_class=1):
-        super().__init__()
-        
-        # Encoder
-        self.enc1 = self.contract_block(num_channels, 64)
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        
-        self.enc2 = self.contract_block(64, 128)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        
-        self.enc3 = self.contract_block(128, 256)
-        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        
-        self.enc4 = self.contract_block(256, 512)
-        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
-        
-        self.enc5 = self.contract_block(512, 1024)
-        
-        # Decoder
-        self.upconv1 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
-        self.dec1 = self.expand_block(1024, 512)
-        
-        self.upconv2 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
-        self.dec2 = self.expand_block(512, 256)
-        
-        self.upconv3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-        self.dec3 = self.expand_block(256, 128)
-        
-        self.upconv4 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-        self.dec4 = self.expand_block(128, 64)
-        
-        # Output layer
-        self.outconv = nn.Conv2d(64, n_class, kernel_size=1)
-        
-    def forward(self, x):
-        # Encoder
-        e1 = relu(self.enc1(x))
-        p1 = self.pool1(e1)
-        
-        e2 = relu(self.enc2(p1))
-        p2 = self.pool2(e2)
-        
-        e3 = relu(self.enc3(p2))
-        p3 = self.pool3(e3)
-        
-        e4 = relu(self.enc4(p3))
-        p4 = self.pool4(e4)
-        
-        e5 = relu(self.enc5(p4))
-        
-        # Decoder
-        d4 = self.upconv1(e5)
-        d4 = torch.cat([d4, e4], dim=1)
-        d4 = relu(self.dec1(d4))
-        
-        d3 = self.upconv2(d4)
-        d3 = torch.cat([d3, e3], dim=1)
-        d3 = relu(self.dec2(d3))
-        
-        d2 = self.upconv3(d3)
-        d2 = torch.cat([d2, e2], dim=1)
-        d2 = relu(self.dec3(d2))
-        
-        d1 = self.upconv4(d2)
-        d1 = torch.cat([d1, e1], dim=1)
-        d1 = relu(self.dec4(d1))
-        
-        # Output layer
-        out = self.outconv(d1)
-        
-        return out
-    
-    def contract_block(self, in_channels, out_channels, kernel_size=3):
-        block = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
-        )
-        return block
-
-    def expand_block(self, in_channels, out_channels, kernel_size=3):
-        block = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
-        )
-        return block
     
