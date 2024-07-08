@@ -6,14 +6,13 @@
     "batch_size": 32,
     "model_type": "simple",
     "learning_rate": 0.001,
-    "number_of_epochs": 30,
+    "number_of_epochs": 50,
     "dropout_rate": 0,
     "early_stopping": false,
     "lr_scheduling": false,
-    "pixel_accuracy": 0.9461488127708435,
-    "dice_coefficient": 0.5588828921318054,
-    "precision": 0.7148969173431396,
-    "specificity": 0.9852373600006104,
-    "recall": 0.4606364369392395,
-    "iou": 0.38953259587287903
+    "pixel_accuracy": 0.806884765625,
+    "dice_coefficient": 0.2802547812461853,
+    "precision": 0.1974359154701233,
+    "recall": 0.48275867104530334,
+    "iou": 0.16296297311782837
 }
