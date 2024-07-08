@@ -85,7 +85,7 @@ def test(model, test_loader, device, plot=False):
     print(f"Test Loss: {test_loss}, Test Accuracy: {test_dice}")
     
     if plot:
-        plot_results(image, label, preds) 
+        plot_results(image.cpu(), label.cpu(), preds.cpu()) 
 
     return test_pixel_accuracy, test_dice , test_precision, test_recall,  test_iou 
 
