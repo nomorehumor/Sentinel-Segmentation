@@ -2,7 +2,8 @@ from datetime import datetime
 import json
 import torch
 from torch.utils.data import DataLoader
-from model import SegmentationModel, UNet
+from model import SegmentationModel
+import segmentation_models_pytorch as smp
 from training import train, test
 from constants import TRAINING_DATASET_DIR, MODELS_DIR, PARAMS_DIR, RESULTS_DIR
 import warnings
@@ -31,9 +32,9 @@ def run_pipeline():
     augmentation_type = ''
     patch_size = 64
     batch_size = 32
-    dropout_rate = 0
-    early_stopping = False
-    lr_scheduling = False
+    dropout_rate = 0.2
+    early_stopping = True
+    lr_scheduling = True
     # dataset_name = "64_rotation"
 
     dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
@@ -48,7 +49,12 @@ def run_pipeline():
     train_loader, val_loader, test_loader = load_data(dataset_name)
 
     if model_type == 'unet':
-        model = UNet(num_channels=C, n_class=1, dropout_rate=dropout_rate)
+        model = smp.Unet(
+        encoder_name="resnet34",       
+        encoder_weights="imagenet",     
+        in_channels=C,                 
+        classes=1,                     
+        )
     else:
         model = SegmentationModel(num_channels=C, dropout_rate=dropout_rate)
 

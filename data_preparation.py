@@ -42,11 +42,9 @@ def create_dataset():
         val_labels = labels[val_idx]   
 
     test_tensor = torch.cat(test_data, dim=0).unsqueeze(0)
-    test_labels = test_tensor[:, :, :, 4].view(test_tensor.size(0), -1).mean(dim=1).numpy().round().astype(int)
 
     print("Distribution of positive classes in train dataset: ", evaluate_dataset_positive_classes(train_labels))
-    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(val_labels))     
-    # print("Distribution of positive classes in test dataset: ", evaluate_dataset_positive_classes(test_labels))     
+    print("Distribution of positive classes in val dataset: ", evaluate_dataset_positive_classes(val_labels))      
 
     create_torch_dataset(train_tensor, val_tensor, test_tensor, TRAIN_PATCH_SIZE)
 
@@ -103,7 +101,7 @@ def create_patches(preprocess_tensor, patch_size, plot=False, relax_criteria=Fal
     patches_grid = preprocess_tensor.unfold(0, patch_size, patch_size).unfold(1, patch_size, patch_size).permute(0,1,3,4,2)
     patches_num_x, patches_num_y = patches_grid.size()[:2]
     patches = patches_grid.flatten(start_dim=0, end_dim=1)
-    threshold = 4000 if relax_criteria else 2000
+    threshold = 12000 if relax_criteria else 8000
     valid_patches = [patch for patch in patches if not is_cloud_present(patch, threshold)]
 
     print(f"{len(valid_patches)}/{len(patches)} patches are valid")
