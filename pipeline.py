@@ -34,9 +34,9 @@ def run_pipeline():
     dropout_rate = 0.2
     early_stopping = True
     lr_scheduling = True
-    dataset_name = "64_rotation"
+    # dataset_name = "64_rotation"
 
-    # dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
+    dataset_name = f'{str(patch_size)}' if not augmented else f'{str(patch_size)}_augmented_{augmentation_type}'
     
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -48,18 +48,12 @@ def run_pipeline():
     train_loader, val_loader, test_loader = load_data(dataset_name)
 
     if model_type == 'unet':
-        model = UNet(num_channels=C, n_class=1)
+        model = UNet(num_channels=C, n_class=1, dropout_rate=dropout_rate)
     elif model_type == 'enhanced_unet':
         model = EnhancedUNet(num_channels=C, n_class=1)
     else:
         model = SegmentationModel(num_channels=C, dropout_rate=dropout_rate)
 
-    # model = smp.Unet(
-    #     encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
-    #     encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
-    #     in_channels=4,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
-    #     classes=1,                      # model output channels (number of classes in your dataset)
-    # )
 
     model.to(device)
 
