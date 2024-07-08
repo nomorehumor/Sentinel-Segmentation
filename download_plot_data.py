@@ -7,15 +7,9 @@ from rasterio.features import rasterize
 from tqdm import tqdm
 import numpy as np
 from matplotlib import pyplot as plt
+from utils import *
 
 from constants import DATASET_DIR, SENTINEL_DATASET_DIR, BUILDING_DATASET_DIR, CITIES, BERLIN_BBOX
-
-def normalize(img):
-    masked_data = np.ma.masked_equal(img, 0)
-    lq, uq = np.quantile(masked_data.compressed(), (0.01, 0.99))
-    image_norm = np.clip(img, a_min=lq, a_max=uq)
-    image_norm = (image_norm - lq) / (uq - lq)
-    return image_norm
 
 
 def read_all_bands_data(dir_path):
@@ -29,14 +23,8 @@ def read_all_bands_data(dir_path):
         ir_data = np.transpose(f.read(), (1,2,0)).squeeze()
 
     all_bands = np.stack([r_data, g_data, b_data, ir_data], axis=-1)
-    all_bands = normalize(all_bands)
+    all_bands = quantile_normalize(all_bands)
     return all_bands
-
-
-def read_footprint_data(dir_path):
-    with rasterio.open(dir_path / "footprint.tiff") as f:
-        building_data = np.transpose(f.read(), (1,2,0)).squeeze()
-    return building_data
         
 
 def download_sentinel_openeo(connection, bbox, dir_path, pbar=None):
@@ -89,7 +77,7 @@ def rasterize_city_features(city_features, bands_dir, label_dir):
         f.write(buildings_raster, 1)
     
 
-def download_band_data(city, city_gdf, city_tqdm):
+def download_band_data(city, city_gdf):
     
     # OpenEO connection
     print("Authenticating to OpenEO")
@@ -137,8 +125,6 @@ def download_building_data(city, city_gdf):
     
         
 def create_bands_plots(city):
-    # for city in CITIES:
-    
     city_path_sentinel = SENTINEL_DATASET_DIR / city.split(",")[0].lower()
     
     all_bands = read_all_bands_data(city_path_sentinel)
@@ -188,11 +174,11 @@ def create_bands_plots(city):
     plt.savefig(city_path_sentinel / "irb.png")
     
     
-def create_building_plot(city_bands_dir, city_building_dir):
+def create_building_plots(city_bands_dir, city_building_dir):
     footprint_file = rasterio.open(city_building_dir / "footprint.tiff")
     building_data = np.transpose(footprint_file.read(), (1,2,0)).squeeze()
     r_data = rasterio.open(city_bands_dir / "R.tiff").read().squeeze()
-    r_data = normalize(r_data)
+    r_data = quantile_normalize(r_data)
     
     plt.figure(figsize=(20, 20))
     plt.imshow(building_data, cmap="Blues")
@@ -216,9 +202,9 @@ if __name__ == '__main__':
         city = city.split(",")[0].lower()
         
         cities_tqdm.set_description(f"Downloading band data for {city}")
-        download_band_data(city, city_gdf, cities_tqdm)
+        download_band_data(city, city_gdf)
         create_bands_plots(city)
                 
         cities_tqdm.set_description(f"Downloading building data for {city}")
         download_building_data(city, city_gdf)
-        create_building_plot(SENTINEL_DATASET_DIR / city, BUILDING_DATASET_DIR / city)
+        create_building_plots(SENTINEL_DATASET_DIR / city, BUILDING_DATASET_DIR / city)
