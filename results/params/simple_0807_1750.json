@@ -1,0 +1,18 @@
+{
+    "number_of_channels": 4,
+    "patch_size": 64,
+    "augmented": false,
+    "augmentation_type": "",
+    "batch_size": 32,
+    "model_type": "simple",
+    "learning_rate": 0.001,
+    "number_of_epochs": 30,
+    "dropout_rate": 0,
+    "early_stopping": false,
+    "lr_scheduling": false,
+    "pixel_accuracy": 0.8606825470924377,
+    "dice_coefficient": 0.6062960624694824,
+    "precision": 0.7116433382034302,
+    "recall": 0.5281168818473816,
+    "iou": 0.43502500653266907
+}
